@@ -18,18 +18,18 @@ the decorator as below:
 ```python
 import logging
 
-from devlog import LogOnStart, LogOnEnd, LogOnError
+from devlog import log_on_start, log_on_end, log_on_error
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-@LogOnStart()
-@LogOnEnd()
+@log_on_start()
+@log_on_end()
 def test_1(a, b):
     return a + b
 
 
-@LogOnError()
+@log_on_error()
 def test_2(a, b):
     return a / b
 
@@ -61,14 +61,14 @@ arguments.
 
 The following example shows how to use variables in messages:
 
-``` python
+```python
 import logging
 
-from devlog import LogOnStart, LogOnEnd, LogOnError
+from devlog import log_on_start
 
 logging.basicConfig(level=logging.DEBUG)
 
-@LogOnStart(logging.INFO, 'Start func {callable.__name__} with args {args}, kwargs {kwargs}')
+@log_on_start(logging.INFO, 'Start func {callable.__name__} with args {args}, kwargs {kwargs}')
 def hello(name):
     print("Hello, {}".format(name))
 
@@ -105,14 +105,14 @@ Available arguments in all decorators are:
 | trace_stack              | Set to True if you want to get the full stack trace along with local variable. Default is `False`                                                                                                                               |
 | trace_stack_message      | The message to use for the stack trace. Default is `{frame.filename}:{frame.lineno} at function {frame.name}@{frame.line}\n\t\t{frame.locals}`<br/>Note: only accept frame as format arguments, frame is a FrameSummary objects |                     
 
-#### LogOnStart
+#### log_on_start
 
 | Arguments | Description                                                                                                                                                                 |
 |-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | level     | The level of the log message. Default is `logging.INFO`                                                                                                                     |
 | message   | The message to log. Could using {args} {kwargs} or function parameter name but not both. <br/>Default is `Start func {callable.__name__} with args {args}, kwargs {kwargs}` |
 
-#### LogOnEnd
+#### log_on_end
 
 | Arguments              | Description                                                                                                                                                                            |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -120,7 +120,7 @@ Available arguments in all decorators are:
 | message                | The message to log. Could using {args} {kwargs} or function parameter name but not both. <br/>Default is `Successfully run func {callable.__name__} with args {args}, kwargs {kwargs}` |
 | result_format_variable | The format variable to use for reference the return from callable. Default is `result`                                                                                                 |
 
-#### LogOnError
+#### log_on_error
 
 | Arguments                 | Description                                                                                                                                                                            |
 |---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
