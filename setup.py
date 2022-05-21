@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name='python-devlog',
-    version='1.0b1',
+    version='1.0b2',
     description="No more logging in your code business logic with decorators",
     long_description=README,
     long_description_content_type="text/markdown",
