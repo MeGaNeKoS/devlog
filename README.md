@@ -23,24 +23,24 @@ from devlog import log_on_start, log_on_end, log_on_error
 logging.basicConfig(level=logging.DEBUG)
 
 
-@log_on_start()
-@log_on_end()
+@log_on_start
+@log_on_end
 def test_1(a, b):
     return a + b
 
 
-@log_on_error()
+@log_on_error
 def test_2(a, b):
     return a / b
 
-
-test_1(1, b=2)
-# INFO:__main__:Start func test_1 with args (1,), kwargs {'b': 2}
-# INFO:__main__:Successfully run func test_1 with args (1,), kwargs {'b': 2}
-
-test_2("abc", "def")
-# ERROR:__main__:Error in func test_2 with args ('abc', 'def'), kwargs {}
-# 	unsupported operand type(s) for /: 'str' and 'str'.
+if __name__ == '__main__':
+    test_1(1, b=2)
+    # INFO:__main__:Start func test_1 with args (1,), kwargs {'b': 2}
+    # INFO:__main__:Successfully run func test_1 with args (1,), kwargs {'b': 2}
+    
+    test_2("abc", "def")
+    # ERROR:__main__:Error in func test_2 with args ('abc', 'def'), kwargs {}
+    # 	unsupported operand type(s) for /: 'str' and 'str'.
 ```
 
 What devlog can do for you
