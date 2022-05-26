@@ -246,7 +246,7 @@ class LogOnError(LoggingDecorator):
 
     def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
         try:
-            return fn(*args, **kwargs)
+            return super()._devlog_executor(fn, *args, **kwargs)
         except BaseException as e:
             self._on_error(fn, e, *args, **kwargs)
 
