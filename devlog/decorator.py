@@ -230,7 +230,6 @@ class LogOnError(LoggingDecorator):
         reraise: Whether to reraise the exception or supress it.
         exception_format_variable: The variable to use for the error.
     """
-    last_exception_id: int = None
 
     def __init__(self, log_level: int = logging.ERROR,
                  message: str = None,
@@ -260,7 +259,6 @@ class LogOnError(LoggingDecorator):
 
         self.log(logger, self.log_level, msg)
         if self.trace_stack:
-            LogOnError.last_exception_id = id(exception)
             self.log_stack(fn)
 
     def _on_error(self, fn: FunctionType, exception: BaseException, *args: Any, **kwargs: Any) -> None:
