@@ -264,7 +264,7 @@ class LogOnError(LoggingDecorator):
             self.log_stack(fn)
 
     def _on_error(self, fn: FunctionType, exception: BaseException, *args: Any, **kwargs: Any) -> None:
-        if exception in self.on_exceptions or not self.on_exceptions:
-            self._do_logging(fn, exception, *args, **kwargs)
+        if issubclass(exception.__class__, self.on_exceptions):
+            self._do_logging(fn, *args, **kwargs)
         if self.reraise:
             raise
