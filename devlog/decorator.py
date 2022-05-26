@@ -111,14 +111,6 @@ class LoggingDecorator(WrapCallback):
             format_kwargs.update(self.bind_param(fn, *fn_args, **fn_kwargs))
         return self.message.format(**format_kwargs)
 
-    @staticmethod
-    def last_raised_exception(fn: FunctionType) -> Optional[Exception]:
-        """
-        Returns the last raised exception in the function.
-        """
-
-        pass
-
     def log_stack(self, fn):
         """
         Logs the stack trace of the function. Could be useful for debugging purposes.
