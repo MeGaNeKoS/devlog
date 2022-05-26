@@ -7,6 +7,7 @@ from typing import Callable, Any, Dict, Tuple, Optional, Union, Type
 from warnings import warn
 
 from devlog import stack_trace
+import traceback
 
 
 class WrapCallback:
@@ -249,12 +250,9 @@ class LogOnError(LoggingDecorator):
         except BaseException as e:
             self._on_error(fn, e, *args, **kwargs)
 
-    def _do_logging(self, fn: FunctionType, exception: BaseException, *args: Any, **kwargs: Any) -> None:
-        if LogOnError.last_exception_id == id(exception):
-            return  # Avoid logging the same exception twice
-
+    def _do_logging(self, fn: FunctionType, *args: Any, **kwargs: Any) -> None:
         logger = self.get_logger(fn)
-        extra = {self.callable_format_variable: fn, self.exception_format_variable: exception}
+        extra = {self.callable_format_variable: fn, self.exception_format_variable: traceback.format_exc().strip()}
         msg = self.build_msg(fn, fn_args=args, fn_kwargs=kwargs, **extra)
 
         self.log(logger, self.log_level, msg)
