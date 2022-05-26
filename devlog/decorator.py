@@ -239,8 +239,9 @@ class LogOnError(LoggingDecorator):
         super().__init__(log_level, message, **kwargs)
         if message is None:
             self.message = f"Error in func {{{self.callable_format_variable}.__name__}} " \
-                           f"with args {{args}}, kwargs {{kwargs}}\n\t{{{exception_format_variable}}}."
-        self.on_exceptions: Union[Type[BaseException], Tuple[Type[BaseException]], Tuple[()]] = on_exceptions or ()
+                           f"with args {{args}}, kwargs {{kwargs}}\n{{{exception_format_variable}}}."
+        self.on_exceptions: Union[Type[BaseException], Tuple[Type[BaseException]], Tuple[()]] = on_exceptions if \
+            on_exceptions is not None else BaseException
         self.reraise = reraise
         self.exception_format_variable = exception_format_variable
 
