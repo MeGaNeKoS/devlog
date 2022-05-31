@@ -13,9 +13,15 @@ def my_except_hook(exception_type, exception_value, traceback_message):
         traceback.print_exception(exception_type, exception_value, traceback_message)
         for frame in traceback.TracebackException.from_exception(exception_value, capture_locals=True).stack[1:]:
             # save to a file
-            print(f"\t{frame.filename}:{frame.lineno} on {frame.line}\n\t\t{frame.locals}", file=f)
+            message = "\t{filename}:{lineno} on {line}\n\t\t{locals}".format(
+                filename=frame.filename,
+                lineno=frame.lineno,
+                line=frame.line,
+                locals=frame.locals
+            )
+            print(message, file=f)
             # output to stdout
-            print(f"\t{frame.filename}:{frame.lineno} on {frame.line}\n\t\t{frame.locals}")
+            print(message)
 
 
 def system_excepthook_overwrite(out_file=None):

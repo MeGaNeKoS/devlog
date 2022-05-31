@@ -1,5 +1,6 @@
 import inspect
 import logging
+import traceback
 from functools import wraps
 from logging import Logger, Handler
 from types import FunctionType
@@ -7,7 +8,6 @@ from typing import Callable, Any, Dict, Tuple, Optional, Union, Type
 from warnings import warn
 
 from devlog import stack_trace
-import traceback
 
 
 class WrapCallback:
@@ -119,12 +119,14 @@ class LoggingDecorator(WrapCallback):
         Also, it will provide the locals of the function and the locals of the caller.
         """
         logger = self.get_logger(fn)
-        self.log(logger, logging.DEBUG, f"Start of the trace {fn.__module__}:{fn.__name__}")
+        self.log(logger, logging.DEBUG, "Start of the trace {module}:{name}".format(module=fn.__module__,
+                                                                                    name=fn.__name__))
         for frame in stack_trace.get_stack_summary():
             msg = self.trace_stack_message.format(frame=frame)
             self.log(logger, logging.DEBUG, msg)
 
-        self.log(logger, logging.DEBUG, f"End of the trace {fn.__module__}:{fn.__name__}")
+        self.log(logger, logging.DEBUG, "end of the trace {module}:{name}".format(module=fn.__module__,
+                                                                                  name=fn.__name__))
 
 
 class LogOnStart(LoggingDecorator):
@@ -150,8 +152,8 @@ class LogOnStart(LoggingDecorator):
                  **kwargs: Any):
         super().__init__(log_level, message, **kwargs)
         if message is None:
-            self.message = f"Start func {{{self.callable_format_variable}.__name__}} " \
-                           f"with args {{args}}, kwargs {{kwargs}}"
+            self.message = "Start func {{{cal_var}.__name__}} " \
+                           "with args {{args}}, kwargs {{kwargs}}".format(cal_var=self.callable_format_variable)
 
     def _devlog_executor(self, fn: FunctionType, *args: Tuple[Any], **kwargs: Any) -> Any:
         self._do_logging(fn, *args, **kwargs)
@@ -191,8 +193,8 @@ class LogOnEnd(LoggingDecorator):
                  **kwargs: Any):
         super().__init__(log_level, message, **kwargs)
         if message is None:
-            self.message = f"Successfully run func {{{self.callable_format_variable}.__name__}} " \
-                           f"with args {{args}}, kwargs {{kwargs}}"
+            self.message = "Successfully run func {{{cal_var}.__name__}} " \
+                           "with args {{args}}, kwargs {{kwargs}}".format(cal_var=self.callable_format_variable)
         self.result_format_variable = result_format_variable
 
     def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
@@ -238,8 +240,11 @@ class LogOnError(LoggingDecorator):
                  reraise: bool = True, exception_format_variable: str = "error", **kwargs):
         super().__init__(log_level, message, **kwargs)
         if message is None:
-            self.message = f"Error in func {{{self.callable_format_variable}.__name__}} " \
-                           f"with args {{args}}, kwargs {{kwargs}}\n{{{exception_format_variable}}}."
+            self.message = "Error in func {{{cal_var}.__name__}} " \
+                           "with args {{args}}, kwargs {{kwargs}}\n{{{except_var}}}.".format(
+                cal_var=self.callable_format_variable,
+                except_var=exception_format_variable
+            )
         self.on_exceptions: Union[Type[BaseException], Tuple[Type[BaseException]], Tuple[()]] = on_exceptions if \
             on_exceptions is not None else BaseException
         self.reraise = reraise
