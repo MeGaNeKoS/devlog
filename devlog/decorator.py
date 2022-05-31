@@ -125,7 +125,7 @@ class LoggingDecorator(WrapCallback):
             msg = self.trace_stack_message.format(frame=frame)
             self.log(logger, logging.DEBUG, msg)
 
-        self.log(logger, logging.DEBUG, "end of the trace {module}:{name}".format(module=fn.__module__,
+        self.log(logger, logging.DEBUG, "End of the trace {module}:{name}".format(module=fn.__module__,
                                                                                   name=fn.__name__))
 
 
