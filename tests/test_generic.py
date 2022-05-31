@@ -66,7 +66,7 @@ class TestDecorators(TestCase):
         wrapped_function = devlog.log_on_start(logger=self.logger,
                                                trace_stack=True)(generic_func)
         wrapped_function(1, 2)
-        self.assertIn('End of the trace tests_generic:generic_func',
+        self.assertIn('End of the trace test_generic:generic_func',
                       self.log_handler.messages["debug"])
 
     def test_log_on_end(self):
@@ -94,7 +94,7 @@ class TestDecorators(TestCase):
         wrapped_function = devlog.log_on_end(logger=self.logger,
                                              trace_stack=True)(generic_func)
         wrapped_function(1, 2)
-        self.assertIn('End of the trace tests_generic:generic_func',
+        self.assertIn('End of the trace test_generic:generic_func',
                       self.log_handler.messages["debug"])
 
     def test_log_on_error(self):
@@ -118,7 +118,7 @@ class TestDecorators(TestCase):
         with pytest.raises(TypeError):
             wrapped_function("abc", 6)
 
-        # self.assertIn('End of the trace tests_generic:test_func',
+        # self.assertIn('End of the trace test_generic:test_func',
         #               self.log_handler.messages["debug"])
 
     def test_set_stack_trace(self):
@@ -133,4 +133,4 @@ class TestDecorators(TestCase):
 
     def test_handler(self):
         decorator = LoggingDecorator(logging.INFO, "", handler=self.log_handler)
-        self.assertEqual(decorator.get_logger(generic_func).name, "tests_generic")
+        self.assertEqual(decorator.get_logger(generic_func).name, "test_generic")
