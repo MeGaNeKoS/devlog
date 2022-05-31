@@ -1,6 +1,8 @@
 import logging
 from unittest import TestCase
 
+import pytest
+
 import devlog
 from devlog.decorator import LoggingDecorator
 
@@ -97,28 +99,25 @@ class TestDecorators(TestCase):
 
     def test_log_on_error(self):
         wrapped_function_wo_parentheses = devlog.log_on_error(generic_func, logger=self.logger)
-        try:
+        with pytest.raises(TypeError):
             wrapped_function_wo_parentheses(1, "abc")
-        except TypeError:
-            pass
+
         # self.assertIn(
         #     'Error in func test_func with args (1, \'abc\'), kwargs {}',
         #     self.log_handler.messages["error"])
 
         wrapped_function_parentheses = devlog.log_on_error(logger=self.logger)(generic_func)
-        try:
+        with pytest.raises(TypeError):
             wrapped_function_parentheses(2, "abc")
-        except TypeError:
-            pass
+
         # self.assertIn(
         #     'Error in func test_func with args (1, \'abc\'), kwargs {}',
         #     self.log_handler.messages["error"])
 
         wrapped_function = devlog.log_on_error(logger=self.logger, trace_stack=True)(generic_func)
-        try:
+        with pytest.raises(TypeError):
             wrapped_function("abc", 6)
-        except TypeError:
-            pass
+
         # self.assertIn('End of the trace tests_generic:test_func',
         #               self.log_handler.messages["debug"])
 
