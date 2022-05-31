@@ -5,7 +5,7 @@ import devlog
 from devlog.decorator import LoggingDecorator
 
 
-def test_func(arg1, arg2, kwarg1=None, kwarg2=None):
+def generic_func(arg1, arg2, kwarg1=None, kwarg2=None):
     return arg1 + arg2
 
 
@@ -44,57 +44,59 @@ class TestDecorators(TestCase):
 
     def test_log_on_start(self):
         # has to pass the logger as a kwarg to redirect the output to our mocking handler
-        wrapped_function_wo_parentheses = devlog.log_on_start(test_func, logger=self.logger)
+        wrapped_function_wo_parentheses = devlog.log_on_start(generic_func, logger=self.logger)
         wrapped_function_wo_parentheses(1, 2)
-        self.assertIn("Start func test_func with args (1, 2), kwargs {}", self.log_handler.messages["info"])
-        wrapped_function_parentheses = devlog.log_on_start(logger=self.logger)(test_func)
+        self.assertIn("Start func generic_func with args (1, 2), kwargs {}", self.log_handler.messages["info"])
+        wrapped_function_parentheses = devlog.log_on_start(logger=self.logger)(generic_func)
         wrapped_function_parentheses(1, 2)
-        self.assertIn("Start func test_func with args (1, 2), kwargs {}", self.log_handler.messages["info"])
+        self.assertIn("Start func generic_func with args (1, 2), kwargs {}", self.log_handler.messages["info"])
 
         wrapped_function = devlog.log_on_start(args_kwargs=False,
                                                logger=self.logger,
-                                               message="Start func test_func with "
+                                               message="Start func generic_func with "
                                                        "arg1 = {arg1}, arg2 = {arg2}, "
                                                        "kwarg1 = {kwarg1}, kwarg2 = {kwarg2}"
-                                               )(test_func)
+                                               )(generic_func)
         wrapped_function(1, 2)
-        self.assertIn("Start func test_func with arg1 = 1, arg2 = 2, kwarg1 = None, kwarg2 = None",
+        self.assertIn("Start func generic_func with arg1 = 1, arg2 = 2, kwarg1 = None, kwarg2 = None",
                       self.log_handler.messages["info"])
 
         wrapped_function = devlog.log_on_start(logger=self.logger,
-                                               trace_stack=True)(test_func)
+                                               trace_stack=True)(generic_func)
         wrapped_function(1, 2)
-        self.assertIn('End of the trace tests_generic:test_func',
+        self.assertIn('End of the trace tests_generic:generic_func',
                       self.log_handler.messages["debug"])
 
     def test_log_on_end(self):
         # has to pass the logger as a kwarg to redirect the output to our mocking handler
-        wrapped_function_wo_parentheses = devlog.log_on_end(test_func, logger=self.logger)
+        wrapped_function_wo_parentheses = devlog.log_on_end(generic_func, logger=self.logger)
         wrapped_function_wo_parentheses(1, 2)
-        self.assertIn("Successfully run func test_func with args (1, 2), kwargs {}", self.log_handler.messages["info"])
-        wrapped_function_parentheses = devlog.log_on_end(logger=self.logger)(test_func)
+        self.assertIn("Successfully run func generic_func with args (1, 2), kwargs {}",
+                      self.log_handler.messages["info"])
+        wrapped_function_parentheses = devlog.log_on_end(logger=self.logger)(generic_func)
         wrapped_function_parentheses(1, 2)
-        self.assertIn("Successfully run func test_func with args (1, 2), kwargs {}", self.log_handler.messages["info"])
+        self.assertIn("Successfully run func generic_func with args (1, 2), kwargs {}",
+                      self.log_handler.messages["info"])
 
         wrapped_function = devlog.log_on_end(
             args_kwargs=False,
             logger=self.logger,
-            message="Successfully run func test_func with "
+            message="Successfully run func generic_func with "
                     "arg1 = {arg1}, arg2 = {arg2}, "
                     "kwarg1 = {kwarg1}, kwarg2 = {kwarg2}"
-        )(test_func)
+        )(generic_func)
         wrapped_function(1, 2)
-        self.assertIn("Successfully run func test_func with arg1 = 1, arg2 = 2, kwarg1 = None, kwarg2 = None",
+        self.assertIn("Successfully run func generic_func with arg1 = 1, arg2 = 2, kwarg1 = None, kwarg2 = None",
                       self.log_handler.messages["info"])
 
         wrapped_function = devlog.log_on_end(logger=self.logger,
-                                             trace_stack=True)(test_func)
+                                             trace_stack=True)(generic_func)
         wrapped_function(1, 2)
-        self.assertIn('End of the trace tests_generic:test_func',
+        self.assertIn('End of the trace tests_generic:generic_func',
                       self.log_handler.messages["debug"])
 
     def test_log_on_error(self):
-        wrapped_function_wo_parentheses = devlog.log_on_error(test_func, logger=self.logger)
+        wrapped_function_wo_parentheses = devlog.log_on_error(generic_func, logger=self.logger)
         try:
             wrapped_function_wo_parentheses(1, "abc")
         except TypeError:
@@ -103,7 +105,7 @@ class TestDecorators(TestCase):
         #     'Error in func test_func with args (1, \'abc\'), kwargs {}',
         #     self.log_handler.messages["error"])
 
-        wrapped_function_parentheses = devlog.log_on_error(logger=self.logger)(test_func)
+        wrapped_function_parentheses = devlog.log_on_error(logger=self.logger)(generic_func)
         try:
             wrapped_function_parentheses(2, "abc")
         except TypeError:
@@ -112,7 +114,7 @@ class TestDecorators(TestCase):
         #     'Error in func test_func with args (1, \'abc\'), kwargs {}',
         #     self.log_handler.messages["error"])
 
-        wrapped_function = devlog.log_on_error(logger=self.logger, trace_stack=True)(test_func)
+        wrapped_function = devlog.log_on_error(logger=self.logger, trace_stack=True)(generic_func)
         try:
             wrapped_function("abc", 6)
         except TypeError:
@@ -128,8 +130,8 @@ class TestDecorators(TestCase):
 
     def test_logger_handler(self):
         decorator = LoggingDecorator(logging.INFO, "", logger=self.logger, handler=self.log_handler)
-        self.assertEqual(decorator.get_logger(test_func).name, self.logger.name)
+        self.assertEqual(decorator.get_logger(generic_func).name, self.logger.name)
 
     def test_handler(self):
         decorator = LoggingDecorator(logging.INFO, "", handler=self.log_handler)
-        self.assertEqual(decorator.get_logger(test_func).name, "tests_generic")
+        self.assertEqual(decorator.get_logger(generic_func).name, "tests_generic")
