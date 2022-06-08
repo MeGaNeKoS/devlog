@@ -1,3 +1,9 @@
+[![GitHub latest version](https://img.shields.io/github/v/release/MeGaNeKoS/devlog?style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/releases/latest)
+[![Gitbug publish badge](https://img.shields.io/github/workflow/status/MeGaNeKoS/devlog/Tests?label=Test&style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/actions/workflows/python-test.yml)
+[![Gitbug publish badge](https://img.shields.io/github/workflow/status/MeGaNeKoS/devlog/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI?label=Deployment&style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/actions/workflows/python-publish.yml)
+![Size](https://img.shields.io/github/repo-size/MeGaNeKoS/devlog?style=for-the-badge)
+![License](https://img.shields.io/github/license/MeGaNeKoS/devlog?style=for-the-badge)
+
 devlog
 =====
 
