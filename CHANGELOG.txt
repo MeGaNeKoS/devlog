@@ -1,5 +1,16 @@
 Change Log
 ==========
+1.2 (13/06/2022)
+----------------
+- Add anti log the same exception twice
+- Add custom traceback
+- Now the module can be excluded from the traceback
+
+1.1 (09/06/2022)
+----------------
+- Add unit testing and tested on python 3.6 to 3.10
+- Stable release of the package
+
 1.0b2 (21/05/2022)
 ------------------
 - Change the decorator from camelCase to snake_case
