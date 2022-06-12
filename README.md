@@ -39,11 +39,12 @@ def test_1(a, b):
 def test_2(a, b):
     return a / b
 
+
 if __name__ == '__main__':
     test_1(1, b=2)
     # INFO:__main__:Start func test_1 with args (1,), kwargs {'b': 2}
     # INFO:__main__:Successfully run func test_1 with args (1,), kwargs {'b': 2}
-    
+
     test_2("abc", "def")
     # ERROR:__main__:Error in func test_2 with args ('abc', 'def'), kwargs {}
     # 	unsupported operand type(s) for /: 'str' and 'str'.
@@ -74,9 +75,11 @@ from devlog import log_on_start
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 @log_on_start(logging.INFO, 'Start func {callable.__name__} with args {args}, kwargs {kwargs}')
 def hello(name):
     print("Hello, {}".format(name))
+
 
 if __name__ == "__main__":
     hello("World")
@@ -102,14 +105,15 @@ The following variables are available in the format string:
 
 Available arguments in all decorators are:
 
-| Arguments                | Description                                                                                                                                                                                                                     |
-|--------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| logger                   | The logger object. If no logger is given, the devlog will create a logger object with the name of the module where the function is defined. Default is `logging.getLogger(callable.__name__)`                                   |
-| handler                  | A custom log handler object. Only available if no logger object is given,                                                                                                                                                       |
-| args_kwargs              | Set true if the message format using args, kwargs format or false to use function parameter name format. Default `True`                                                                                                         |
-| callable_format_variable | The format variable to use for callable. Default is `callable`                                                                                                                                                                  |
-| trace_stack              | Set to True if you want to get the full stack trace along with local variable. Default is `False`                                                                                                                               |
-| trace_stack_message      | The message to use for the stack trace. Default is `{frame.filename}:{frame.lineno} at function {frame.name}@{frame.line}\n\t\t{frame.locals}`<br/>Note: only accept frame as format arguments, frame is a FrameSummary objects |                     
+| Arguments                | Description                                                                                                                                                                                   |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| logger                   | The logger object. If no logger is given, the devlog will create a logger object with the name of the module where the function is defined. Default is `logging.getLogger(callable.__name__)` |
+| handler                  | A custom log handler object. Only available if no logger object is given,                                                                                                                     |
+| args_kwargs              | Set true if the message format using args, kwargs format or false to use function parameter name format. Default `True`                                                                       |
+| callable_format_variable | The format variable to use for callable. Default is `callable`                                                                                                                                |
+| trace_stack              | Set to True if you want to get the full stack trace. Default is `False` or `capture_local`                                                                                                    |
+| capture_locals           | Set to True if you want to get the local variable of the function. Default is `False` (or `trace_stack` on log_on_error decorator)                                                            |
+| include_decorator        | Set to True if you want to include the devlog libray on the stack. Default is `False`                                                                                                         |
 
 #### log_on_start
 
@@ -136,9 +140,10 @@ Available arguments in all decorators are:
 | reraise                   | Control whether the exception should be reraised after logging. Default is `True`                                                                                                      | 
 | exception_format_variable | The format variable to use for reference the exception raised in callable. Default is `error`                                                                                          |
 
-
 ### Extras
+
 #### Stack trace
+
 The stack trace configuration.
 
 | method                   | Description                                                                                                                                        |
@@ -147,13 +152,15 @@ The stack trace configuration.
 | set_stack_removal_frames | The number of frames to remove from the back of the stack trace (positive value). Default is `6` (the last 6 frame usually from the devlog module) |
 
 #### Custom exception hook
+
 Override the default exception hook with a custom function.
 
 ```python
 import devlog
 
-devlog.system_excepthook_overwrite() # Overwrite the default exception hook
+devlog.system_excepthook_overwrite()  # Overwrite the default exception hook
 ```
+
 This will replace the sys.excepthook with the devlog.excepthook.
 
 | Arguments | Description                                                   |
