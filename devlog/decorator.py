@@ -266,7 +266,9 @@ class LogOnError(LoggingDecorator):
             self.log_stack(fn)
 
     def _on_error(self, fn: FunctionType, exception: BaseException, *args: Any, **kwargs: Any) -> None:
-        if issubclass(exception.__class__, self.on_exceptions):
+
+        if issubclass(exception.__class__, self.on_exceptions) and not hasattr(exception, "reraised"):
             self._do_logging(fn, *args, **kwargs)
+            exception.reraised = True  # Mark the exception as reraised, so no more logging is done.
         if self.reraise:
             raise
