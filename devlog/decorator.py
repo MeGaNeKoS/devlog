@@ -1,13 +1,12 @@
 import inspect
 import logging
+import sys
 import traceback
 from functools import wraps
 from logging import Logger, Handler
 from types import FunctionType
 from typing import Callable, Any, Dict, Tuple, Optional, Union, Type
 from warnings import warn
-
-from devlog import stack_trace
 
 
 class WrapCallback:
@@ -45,15 +44,13 @@ class LoggingDecorator(WrapCallback):
         callable_format_variable: The name of the variable to use for the callable.
         args_kwargs: If True, the message will accept {args} {kwargs} format.
         trace_stack: Whether to include the stack trace in the log.
-        trace_stack_message:The message format for the stack trace log.
+        capture_locals: Capture the locals of the function.
+        include_decorator: Whether to include the decorator in the trace log.
     """
 
     def __init__(self, log_level: int, message: str, *, logger: Optional[Logger] = None,
-                 handler: Optional[Handler] = None, args_kwargs=True,
-                 callable_format_variable="callable",
-                 trace_stack: bool = False,
-                 trace_stack_message: str = "{frame.filename}:{frame.lineno} at "
-                                            "function {frame.name}@{frame.line}\n\t\t{frame.locals}"):
+                 handler: Optional[Handler] = None, args_kwargs=True, callable_format_variable="callable",
+                 trace_stack: bool = False, capture_locals: bool = False, include_decorator: bool = False):
         self.log_level = log_level
         self.message = message
 
@@ -65,8 +62,9 @@ class LoggingDecorator(WrapCallback):
         self._handler = handler
 
         self.callable_format_variable = callable_format_variable
-        self.trace_stack = trace_stack
-        self.trace_stack_message = trace_stack_message
+        self.include_decorator = include_decorator
+        self.trace_stack = trace_stack or capture_locals
+        self.capture_locals = capture_locals
         self.args_kwargs = args_kwargs
 
     @staticmethod
@@ -86,6 +84,15 @@ class LoggingDecorator(WrapCallback):
                 self._logger.addHandler(self._handler)
 
         return self._logger
+
+    @staticmethod
+    def get_stack_summary(include_decorator, *args, **kwargs):
+        stack = traceback.StackSummary.extract(traceback.walk_stack(None), *args, **kwargs)
+        stack.reverse()
+
+        for frame in stack:
+            if include_decorator or frame.filename != __file__:  # exclude this file
+                yield frame
 
     @staticmethod
     def bind_param(fn: FunctionType, *args: Tuple[Any], **kwargs: Any) -> Dict[str, Any]:
@@ -111,22 +118,6 @@ class LoggingDecorator(WrapCallback):
         else:
             format_kwargs.update(self.bind_param(fn, *fn_args, **fn_kwargs))
         return self.message.format(**format_kwargs)
-
-    def log_stack(self, fn):
-        """
-        Logs the stack trace of the function. Could be useful for debugging purposes.
-        It will provide the stack trace of the function and the stack trace of the caller.
-        Also, it will provide the locals of the function and the locals of the caller.
-        """
-        logger = self.get_logger(fn)
-        self.log(logger, logging.DEBUG, "Start of the trace {module}:{name}".format(module=fn.__module__,
-                                                                                    name=fn.__name__))
-        for frame in stack_trace.get_stack_summary():
-            msg = self.trace_stack_message.format(frame=frame)
-            self.log(logger, logging.DEBUG, msg)
-
-        self.log(logger, logging.DEBUG, "End of the trace {module}:{name}".format(module=fn.__module__,
-                                                                                  name=fn.__name__))
 
 
 class LogOnStart(LoggingDecorator):
@@ -166,7 +157,10 @@ class LogOnStart(LoggingDecorator):
 
         self.log(logger, self.log_level, msg)
         if self.trace_stack:
-            self.log_stack(fn)
+            stack = traceback.StackSummary(
+                LoggingDecorator.get_stack_summary(self.include_decorator, capture_locals=self.capture_locals)
+            )
+            self.log(logger, logging.DEBUG, "".join(stack.format()).strip())
 
 
 class LogOnEnd(LoggingDecorator):
@@ -211,7 +205,10 @@ class LogOnEnd(LoggingDecorator):
 
         self.log(logger, self.log_level, msg)
         if self.trace_stack:
-            self.log_stack(fn)
+            stack = traceback.StackSummary(
+                LoggingDecorator.get_stack_summary(self.include_decorator, capture_locals=self.capture_locals)
+            )
+            self.log(logger, logging.DEBUG, "".join(stack.format()).strip())
 
 
 class LogOnError(LoggingDecorator):
@@ -249,6 +246,7 @@ class LogOnError(LoggingDecorator):
             on_exceptions is not None else BaseException
         self.reraise = reraise
         self.exception_format_variable = exception_format_variable
+        self.capture_locals = self.trace_stack or self.capture_locals
 
     def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
         try:
@@ -258,12 +256,24 @@ class LogOnError(LoggingDecorator):
 
     def _do_logging(self, fn: FunctionType, *args: Any, **kwargs: Any) -> None:
         logger = self.get_logger(fn)
-        extra = {self.callable_format_variable: fn, self.exception_format_variable: traceback.format_exc().strip()}
+        full_traceback = traceback.TracebackException(*sys.exc_info(), capture_locals=self.capture_locals)
+        custom_traceback = list(LoggingDecorator.get_stack_summary(
+            self.include_decorator, capture_locals=self.capture_locals)
+        )
+
+        # exclude all the stack trace that are in this module
+        for frame in full_traceback.stack:
+            if frame.filename != __file__ or self.include_decorator:
+                custom_traceback.append(frame)
+
+        full_traceback.stack = traceback.StackSummary(custom_traceback)
+
+        extra = {self.callable_format_variable: fn,
+                 self.exception_format_variable: "".join(list(full_traceback.format(chain=True))).strip()}
+
         msg = self.build_msg(fn, fn_args=args, fn_kwargs=kwargs, **extra)
 
         self.log(logger, self.log_level, msg)
-        if self.trace_stack:
-            self.log_stack(fn)
 
     def _on_error(self, fn: FunctionType, exception: BaseException, *args: Any, **kwargs: Any) -> None:
 

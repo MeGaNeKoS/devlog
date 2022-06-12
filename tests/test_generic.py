@@ -70,7 +70,8 @@ class TestDecorators(TestCase):
         wrapped_function = devlog.log_on_start(logger=self.logger,
                                                trace_stack=True)(generic_func)
         wrapped_function(1, 2)
-        self.assertIn('End of the trace test_generic:generic_func',
+        # guarantee that the trace is existed, otherwise the test will fail
+        self.assertIn(self.log_handler.messages["debug"][0],
                       self.log_handler.messages["debug"])
 
     def test_log_on_end(self):
@@ -102,7 +103,7 @@ class TestDecorators(TestCase):
         wrapped_function = devlog.log_on_end(logger=self.logger,
                                              trace_stack=True)(generic_func)
         wrapped_function(1, 2)
-        self.assertIn('End of the trace test_generic:generic_func',
+        self.assertIn(self.log_handler.messages["debug"][0],
                       self.log_handler.messages["debug"])
 
     def test_log_on_error(self):
@@ -138,12 +139,6 @@ class TestDecorators(TestCase):
             wrapped_function(4, "abc")
             self.assertIn('End of the trace test_generic:generic_func',
                           self.log_handler.messages["debug"])
-
-    def test_set_stack_trace(self):
-        devlog.set_stack_removal_frames(-6)
-        self.assert_(devlog.stack_trace.DEFAULT_STACK_REMOVAL_FRAMES, 6)
-        devlog.set_stack_start_frames(-6)
-        self.assert_(devlog.stack_trace.DEFAULT_STACK_START_FRAME, 6)
 
     def test_logger_handler(self):
         decorator = LoggingDecorator(logging.INFO, "", logger=self.logger, handler=self.log_handler)
