@@ -1,6 +1,6 @@
 [![GitHub latest version](https://img.shields.io/github/v/release/MeGaNeKoS/devlog?style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/releases/latest)
-[![Gitbug publish badge](https://img.shields.io/github/workflow/status/MeGaNeKoS/devlog/Tests?label=Test&style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/actions/workflows/python-test.yml)
-[![Gitbug publish badge](https://img.shields.io/github/workflow/status/MeGaNeKoS/devlog/Publish%20Python%20%F0%9F%90%8D%20distributions%20%F0%9F%93%A6%20to%20PyPI%20and%20TestPyPI?label=Deployment&style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/actions/workflows/python-publish.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/MeGaNeKoS/devlog/python-test.yml?label=Tests&style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/actions/workflows/python-test.yml)
+[![Publish](https://img.shields.io/github/actions/workflow/status/MeGaNeKoS/devlog/python-publish.yml?label=Publish&style=for-the-badge)](https://github.com/MeGaNeKoS/devlog/actions/workflows/python-publish.yml)
 ![Size](https://img.shields.io/github/repo-size/MeGaNeKoS/devlog?style=for-the-badge)
 ![License](https://img.shields.io/github/license/MeGaNeKoS/devlog?style=for-the-badge)
 
@@ -9,21 +9,29 @@ devlog
 
 No more logging in your code business logic with python decorators.
 
-Logging is a very powerful tool for debugging and monitoring your code. But if you are often ommitting logging
-statements, you will quickly find yourself overcrowded with logging statements.
+Logging is a very powerful tool for debugging and monitoring your code. But if you are often adding logging
+statements, you will quickly find your code overcrowded with them.
 
-Fortunately, you could avoid this by using the python decorator. This library provide easy logging for your code without
-stealing readability and maintainability. Furthermore, it also provides stack trace to get full local variable on the
-function.
+Fortunately, you can avoid this by using python decorators. This library provides easy logging for your code without
+stealing readability and maintainability. It also provides stack traces with full local variables, value sanitization,
+and async support.
 
-How to use:
------------
-To use this library, you just need to add the decorator to your function. Depending on when you want to log, you can use
-the decorator as below:
+**Requires Python 3.9+**
+
+Installation
+------------
+
+```bash
+pip install python-devlog
+```
+
+How to use
+----------
+
+Add the decorator to your function. Depending on when you want to log, you can use:
 
 ```python
 import logging
-
 from devlog import log_on_start, log_on_end, log_on_error
 
 logging.basicConfig(level=logging.DEBUG)
@@ -31,46 +39,84 @@ logging.basicConfig(level=logging.DEBUG)
 
 @log_on_start
 @log_on_end
-def test_1(a, b):
+def add(a, b):
     return a + b
 
 
 @log_on_error
-def test_2(a, b):
+def divide(a, b):
     return a / b
 
 
 if __name__ == '__main__':
-    test_1(1, b=2)
-    # INFO:__main__:Start func test_1 with args (1,), kwargs {'b': 2}
-    # INFO:__main__:Successfully run func test_1 with args (1,), kwargs {'b': 2}
+    add(1, b=2)
+    # INFO:__main__:Start func add with args (1,), kwargs {'b': 2}
+    # INFO:__main__:Successfully run func add with args (1,), kwargs {'b': 2}
 
-    test_2("abc", "def")
-    # ERROR:__main__:Error in func test_2 with args ('abc', 'def'), kwargs {}
+    divide("abc", "def")
+    # ERROR:__main__:Error in func divide with args ('abc', 'def'), kwargs {}
     # 	unsupported operand type(s) for /: 'str' and 'str'.
 ```
+
+### Async support
+
+All decorators work with async functions automatically:
+
+```python
+@log_on_start
+@log_on_end
+@log_on_error
+async def fetch_data(url):
+    ...
+```
+
+### Value sanitization
+
+Prevent sensitive values from appearing in logs using `Sensitive` or `sanitize_params`:
+
+```python
+from devlog import log_on_start, Sensitive
+
+
+# Option 1: Wrap the value — function receives the real value, logs show "***"
+@log_on_start
+def login(username, password):
+    ...
+
+login("admin", Sensitive("hunter2"))
+# INFO:__main__:Start func login with args ('admin', '***'), kwargs {}
+
+
+# Option 2: Auto-redact by parameter name
+@log_on_start(sanitize_params={"password", "token", "secret"})
+def connect(host, token):
+    ...
+
+connect("example.com", "sk-abc123")
+# INFO:__main__:Start func connect with args ('example.com', '***'), kwargs {}
+```
+
+`Sensitive` is a transparent proxy — the wrapped function receives the real value. Only devlog log output is redacted.
 
 What devlog can do for you
 ---------------------------
 
 ### Decorators
 
-devlog provides three different decorators:
+devlog provides three decorators:
 
-- LogOnStart: Log when the function is called.
-- LogOnEnd: Log when the function is finished.
-- LogOnError: Log when the function is finished with error.
+- **log_on_start**: Log when the function is called.
+- **log_on_end**: Log when the function finishes successfully.
+- **log_on_error**: Log when the function raises an exception.
 
 Use variables in messages
 =========================
-The message given to decorators are treated as a format string which takes the function arguments as the format
-arguments.
 
-The following example shows how to use variables in messages:
+The message given to decorators is treated as a format string which takes the function arguments as format
+arguments.
 
 ```python
 import logging
-
 from devlog import log_on_start
 
 logging.basicConfig(level=logging.DEBUG)
@@ -90,7 +136,7 @@ Which will print:
 
 ### Documentation
 
-#### format variables
+#### Format variables
 
 The following variables are available in the format string:
 
@@ -101,59 +147,51 @@ The following variables are available in the format string:
 | result                | The return value of the function                        | No         | Yes      | No         |
 | error                 | The error object if the function is finished with error | No         | No       | Yes        |
 
-#### base arguments
+#### Base arguments
 
-Available arguments in all decorators are:
+Available arguments in all decorators:
 
-| Arguments                | Description                                                                                                                                                                                   |
+| Argument                 | Description                                                                                                                                                                                   |
 |--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| logger                   | The logger object. If no logger is given, the devlog will create a logger object with the name of the module where the function is defined. Default is `logging.getLogger(callable.__name__)` |
-| handler                  | A custom log handler object. Only available if no logger object is given,                                                                                                                     |
-| args_kwargs              | Set true if the message format using args, kwargs format or false to use function parameter name format. Default `True`                                                                       |
-| callable_format_variable | The format variable to use for callable. Default is `callable`                                                                                                                                |
-| trace_stack              | Set to True if you want to get the full stack trace. Default is `False` or `capture_local`                                                                                                    |
-| capture_locals           | Set to True if you want to get the local variable of the function. Default is `False` (or `trace_stack` on log_on_error decorator)                                                            |
-| include_decorator        | Set to True if you want to include the devlog libray on the stack. Default is `False`                                                                                                         |
+| logger                   | The logger object. If no logger is given, devlog will create one with the module name where the function is defined. Default is `logging.getLogger(callable.__module__)`                       |
+| handler                  | A custom log handler object. Only available if no logger object is given.                                                                                                                     |
+| args_kwargs              | Set `True` to use `{args}`, `{kwargs}` format, or `False` to use function parameter names. Default `True`                                                                                    |
+| callable_format_variable | The format variable name for the callable. Default is `callable`                                                                                                                              |
+| trace_stack              | Set to `True` to get the full stack trace. Default is `False`                                                                                                                                 |
+| capture_locals           | Set to `True` to capture local variables in stack frames. Default is `False` (or `trace_stack` on log_on_error)                                                                               |
+| include_decorator        | Set to `True` to include devlog frames in the stack trace. Default is `False`                                                                                                                 |
+| sanitize_params          | A set of parameter names to auto-redact in log messages. Default is `None`                                                                                                                    |
 
 #### log_on_start
 
-| Arguments | Description                                                                                                                                                                 |
-|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| level     | The level of the log message. Default is `logging.INFO`                                                                                                                     |
-| message   | The message to log. Could using {args} {kwargs} or function parameter name but not both. <br/>Default is `Start func {callable.__name__} with args {args}, kwargs {kwargs}` |
+| Argument | Description                                                                                                                                                                 |
+|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| level    | The level of the log message. Default is `logging.INFO`                                                                                                                     |
+| message  | The message to log. Can use `{args}` `{kwargs}` or function parameter names, but not both. Default is `Start func {callable.__name__} with args {args}, kwargs {kwargs}`    |
 
 #### log_on_end
 
-| Arguments              | Description                                                                                                                                                                            |
+| Argument               | Description                                                                                                                                                                            |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | level                  | The level of the log message. Default is `logging.INFO`                                                                                                                                |
-| message                | The message to log. Could using {args} {kwargs} or function parameter name but not both. <br/>Default is `Successfully run func {callable.__name__} with args {args}, kwargs {kwargs}` |
-| result_format_variable | The format variable to use for reference the return from callable. Default is `result`                                                                                                 |
+| message                | The message to log. Can use `{args}` `{kwargs}` or function parameter names, but not both. Default is `Successfully run func {callable.__name__} with args {args}, kwargs {kwargs}`    |
+| result_format_variable | The format variable name for the return value. Default is `result`                                                                                                                     |
 
 #### log_on_error
 
-| Arguments                 | Description                                                                                                                                                                            |
-|---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| level                     | The level of the log message. Default is `logging.ERROR`                                                                                                                               |
-| message                   | The message to log. Could using {args} {kwargs} or function parameter name but not both. <br/>Default is `Successfully run func {callable.__name__} with args {args}, kwargs {kwargs}` |
-| on_exceptions             | A tuple containing exception classes or a single exception, which should get caught and trigger the logging. Default is `tuple()` (All exception will get caught)                      |
-| reraise                   | Control whether the exception should be reraised after logging. Default is `True`                                                                                                      | 
-| exception_format_variable | The format variable to use for reference the exception raised in callable. Default is `error`                                                                                          |
+| Argument                  | Description                                                                                                                                                                          |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| level                     | The level of the log message. Default is `logging.ERROR`                                                                                                                             |
+| message                   | The message to log. Can use `{args}` `{kwargs}` or function parameter names, but not both. Default is `Error in func {callable.__name__} with args {args}, kwargs {kwargs}\n{error}` |
+| on_exceptions             | Exception classes to catch and log. Default catches all exceptions.                                                                                                                  |
+| reraise                   | Whether to reraise the exception after logging. Default is `True`                                                                                                                    |
+| exception_format_variable | The format variable name for the exception. Default is `error`                                                                                                                       |
 
 ### Extras
 
-#### Stack trace
-
-The stack trace configuration.
-
-| method                   | Description                                                                                                                                        |
-|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| set_stack_start_frames   | The number of frames to skip at the start (positive value). Default is `0`                                                                         |
-| set_stack_removal_frames | The number of frames to remove from the back of the stack trace (positive value). Default is `6` (the last 6 frame usually from the devlog module) |
-
 #### Custom exception hook
 
-Override the default exception hook with a custom function.
+Override the default exception hook to write crash logs with local variable capture:
 
 ```python
 import devlog
@@ -161,8 +199,8 @@ import devlog
 devlog.system_excepthook_overwrite()  # Overwrite the default exception hook
 ```
 
-This will replace the sys.excepthook with the devlog.excepthook.
+This replaces `sys.excepthook` with devlog's handler, which writes detailed crash information to a file.
 
-| Arguments | Description                                                   |
-|-----------|---------------------------------------------------------------|
-| out_file  | The path to the file to write the log. Default is `crash.log` |
+| Argument | Description                                                   |
+|----------|---------------------------------------------------------------|
+| out_file | The path to the file to write the crash log. Default is `crash.log` |

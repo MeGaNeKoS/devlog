@@ -2,6 +2,34 @@
 requires = ["setuptools>=42.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "python-devlog"
+version = "2.0"
+description = "No more logging in your code business logic with decorators"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "めがねこ", email = "neko@meganeko.dev" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = ["clean code", "decorators", "logging"]
+
+[project.urls]
+Homepage = "https://github.com/MeGaNeKoS/devlog"
+
+[tool.setuptools]
+packages = ["devlog"]
+
 [tool.pytest.ini_options]
 addopts = "--cov=devlog"
 testpaths = [
