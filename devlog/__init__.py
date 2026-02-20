@@ -1,5 +1,5 @@
 from .custom_excepthook import system_excepthook_overwrite
-from .decorator import LogOnStart, LogOnError, LogOnEnd
+from .decorators import LogOnStart, LogOnError, LogOnEnd
 
 __all__ = ["log_on_start", "log_on_end", "log_on_error", "system_excepthook_overwrite"]
 

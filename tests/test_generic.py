@@ -4,7 +4,7 @@ from unittest import TestCase
 import pytest
 
 import devlog
-from devlog.decorator import LoggingDecorator
+from devlog.base import LoggingDecorator
 
 
 def generic_func(arg1, arg2, kwarg1=None, kwarg2=None):
