@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=42.0", "wheel"]
+requires = ["setuptools>=42.0", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-devlog"
-version = "2.0"
+dynamic = ["version"]
 description = "No more logging in your code business logic with decorators"
 readme = "README.md"
 license = "MIT"
@@ -29,6 +29,8 @@ Homepage = "https://github.com/MeGaNeKoS/devlog"
 
 [tool.setuptools]
 packages = ["devlog"]
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 addopts = "--cov=devlog"
