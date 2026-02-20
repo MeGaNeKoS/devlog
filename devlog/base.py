@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import logging
 import sys
@@ -5,8 +6,10 @@ import traceback
 from functools import wraps
 from logging import Logger, Handler
 from types import FunctionType
-from typing import Callable, Any, Dict, Tuple, Optional, Union, Type
+from typing import Any, Callable, Dict, Optional, Set, Tuple, Type, Union
 from warnings import warn
+
+from .sanitize import Sensitive, unwrap_sensitive, format_value
 
 
 class WrapCallback:
@@ -18,13 +21,25 @@ class WrapCallback:
     """
 
     # default execute wrapped function
-    def _devlog_executor(self, fn: FunctionType, *args: Tuple[Any], **kwargs: Any) -> Any:
+    def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
         return fn(*args, **kwargs)
 
+    async def _async_devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
+        return await fn(*args, **kwargs)
+
     def __call__(self, fn: FunctionType) -> Callable[..., Any]:
-        @wraps(fn)
-        def devlog_wrapper(*args: Tuple[Any], **kwargs: Any) -> Any:
-            return self._devlog_executor(fn, *args, **kwargs)
+        if asyncio.iscoroutinefunction(fn):
+            @wraps(fn)
+            async def devlog_wrapper(*args: Any, **kwargs: Any) -> Any:
+                __tracebackhide__ = True
+                return await self._async_devlog_executor(fn, *args, **kwargs)
+        else:
+            @wraps(fn)
+            def devlog_wrapper(*args: Any, **kwargs: Any) -> Any:
+                __tracebackhide__ = True
+                return self._devlog_executor(fn, *args, **kwargs)
 
         return devlog_wrapper
 
@@ -46,14 +61,21 @@ class LoggingDecorator(WrapCallback):
         trace_stack: Whether to include the stack trace in the log.
         capture_locals: Capture the locals of the function.
         include_decorator: Whether to include the decorator in the trace log.
+        sanitize_params: Set of parameter names to auto-redact in logs.
     """
 
+    # Global default for sanitize_params
+    default_sanitize_params: Optional[Set[str]] = None
+
     # Files to exclude from stack traces (populated by submodules)
-    _internal_files: set = set()
+    _internal_files: Set[str] = set()
 
     def __init__(self, log_level: int, message: str, *, logger: Optional[Logger] = None,
-                 handler: Optional[Handler] = None, args_kwargs=True, callable_format_variable="callable",
-                 trace_stack: bool = False, capture_locals: bool = False, include_decorator: bool = False):
+                 handler: Optional[Handler] = None, args_kwargs: bool = True,
+                 callable_format_variable: str = "callable",
+                 trace_stack: bool = False, capture_locals: bool = False,
+                 include_decorator: bool = False,
+                 sanitize_params: Optional[Set[str]] = None):
         self.log_level = log_level
         self.message = message
 
@@ -69,6 +91,7 @@ class LoggingDecorator(WrapCallback):
         self.trace_stack = trace_stack or capture_locals
         self.capture_locals = capture_locals
         self.args_kwargs = args_kwargs
+        self.sanitize_params = sanitize_params if sanitize_params is not None else self.default_sanitize_params
 
     @staticmethod
     def log(logger: Logger, log_level: int, msg: str) -> None:
@@ -93,7 +116,7 @@ class LoggingDecorator(WrapCallback):
         return filename in cls._internal_files
 
     @classmethod
-    def get_stack_summary(cls, include_decorator, *args, **kwargs):
+    def get_stack_summary(cls, include_decorator: bool, *args: Any, **kwargs: Any):
         stack = traceback.StackSummary.extract(traceback.walk_stack(None), *args, **kwargs)
         stack.reverse()
 
@@ -102,7 +125,7 @@ class LoggingDecorator(WrapCallback):
                 yield frame
 
     @staticmethod
-    def bind_param(fn: FunctionType, *args: Tuple[Any], **kwargs: Any) -> Dict[str, Any]:
+    def bind_param(fn: FunctionType, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """
         Returns a dictionary with all the `parameter`: `value` in the function.
         """
@@ -113,6 +136,13 @@ class LoggingDecorator(WrapCallback):
 
         return bounded_param
 
+    def _sanitize_bound_params(self, bound_params: Dict[str, Any]) -> Dict[str, str]:
+        """Format bound params with sanitization applied."""
+        result = {}
+        for name, value in bound_params.items():
+            result[name] = format_value(value, name, self.sanitize_params)
+        return result
+
     def build_msg(self, fn: FunctionType, fn_args: Any, fn_kwargs: Any, **extra: Any) -> str:
         """
         Builds the message log using the message format and the function arguments.
@@ -120,11 +150,34 @@ class LoggingDecorator(WrapCallback):
         format_kwargs = extra
 
         if self.args_kwargs:
-            format_kwargs["args"] = fn_args
-            format_kwargs["kwargs"] = fn_kwargs
+            # Sanitize args and kwargs for display
+            sanitized_args = tuple(
+                format_value(a, sanitize_params=self.sanitize_params) for a in fn_args
+            ) if self.sanitize_params or any(isinstance(a, Sensitive) for a in fn_args) else fn_args
+            sanitized_kwargs = {
+                k: format_value(v, k, self.sanitize_params) for k, v in fn_kwargs.items()
+            } if self.sanitize_params or any(isinstance(v, Sensitive) for v in fn_kwargs.values()) else fn_kwargs
+            format_kwargs["args"] = sanitized_args
+            format_kwargs["kwargs"] = sanitized_kwargs
         else:
-            format_kwargs.update(self.bind_param(fn, *fn_args, **fn_kwargs))
+            bound = self.bind_param(fn, *fn_args, **fn_kwargs)
+            if self.sanitize_params or any(isinstance(v, Sensitive) for v in bound.values()):
+                format_kwargs.update(self._sanitize_bound_params(bound))
+            else:
+                format_kwargs.update(bound)
         return self.message.format(**format_kwargs)
+
+    @staticmethod
+    def _unwrap_args(args: tuple, kwargs: dict) -> Tuple[tuple, dict]:
+        """Unwrap Sensitive values before passing to the actual function."""
+        unwrapped_args = tuple(unwrap_sensitive(a) for a in args)
+        unwrapped_kwargs = {k: unwrap_sensitive(v) for k, v in kwargs.items()}
+        return unwrapped_args, unwrapped_kwargs
+
+    def _has_sensitive(self, args: tuple, kwargs: dict) -> bool:
+        """Check if any args/kwargs contain Sensitive values."""
+        return any(isinstance(a, Sensitive) for a in args) or \
+               any(isinstance(v, Sensitive) for v in kwargs.values())
 
 
 # Register this file as internal

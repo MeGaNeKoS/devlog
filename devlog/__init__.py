@@ -1,7 +1,8 @@
 from .custom_excepthook import system_excepthook_overwrite
 from .decorators import LogOnStart, LogOnError, LogOnEnd
+from .sanitize import Sensitive
 
-__all__ = ["log_on_start", "log_on_end", "log_on_error", "system_excepthook_overwrite"]
+__all__ = ["log_on_start", "log_on_end", "log_on_error", "system_excepthook_overwrite", "Sensitive"]
 
 
 def log_on_start(*args, **kwargs):

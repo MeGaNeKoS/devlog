@@ -1,10 +1,11 @@
+import asyncio
 import logging
 import sys
 import traceback
 from types import FunctionType
 from typing import Any, Optional, Tuple, Type, Union
 
-from .base import LoggingDecorator
+from .base import WrapCallback, LoggingDecorator
 
 
 class LogOnStart(LoggingDecorator):
@@ -26,16 +27,26 @@ class LogOnStart(LoggingDecorator):
     """
 
     def __init__(self, log_level: int = logging.INFO,
-                 message: str = None,
+                 message: Optional[str] = None,
                  **kwargs: Any):
         super().__init__(log_level, message, **kwargs)
         if message is None:
             self.message = "Start func {{{cal_var}.__name__}} " \
                            "with args {{args}}, kwargs {{kwargs}}".format(cal_var=self.callable_format_variable)
 
-    def _devlog_executor(self, fn: FunctionType, *args: Tuple[Any], **kwargs: Any) -> Any:
+    def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
         self._do_logging(fn, *args, **kwargs)
+        if self._has_sensitive(args, kwargs):
+            args, kwargs = self._unwrap_args(args, kwargs)
         return super()._devlog_executor(fn, *args, **kwargs)
+
+    async def _async_devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
+        self._do_logging(fn, *args, **kwargs)
+        if self._has_sensitive(args, kwargs):
+            args, kwargs = self._unwrap_args(args, kwargs)
+        return await super()._async_devlog_executor(fn, *args, **kwargs)
 
     def _do_logging(self, fn: FunctionType, *args: Any, **kwargs: Any) -> None:
         logger = self.get_logger(fn)
@@ -70,7 +81,7 @@ class LogOnEnd(LoggingDecorator):
     """
 
     def __init__(self, log_level: int = logging.INFO,
-                 message: str = None, result_format_variable: str = "result",
+                 message: Optional[str] = None, result_format_variable: str = "result",
                  **kwargs: Any):
         super().__init__(log_level, message, **kwargs)
         if message is None:
@@ -79,12 +90,24 @@ class LogOnEnd(LoggingDecorator):
         self.result_format_variable = result_format_variable
 
     def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
+        original_args, original_kwargs = args, kwargs
+        if self._has_sensitive(args, kwargs):
+            args, kwargs = self._unwrap_args(args, kwargs)
         result = super()._devlog_executor(fn, *args, **kwargs)
-        self._do_logging(fn, result, *args, **kwargs)
-
+        self._do_logging(fn, result, *original_args, **original_kwargs)
         return result
 
-    def _do_logging(self, fn: FunctionType, result: Any, *args: Tuple[Any], **kwargs: Any) -> None:
+    async def _async_devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
+        original_args, original_kwargs = args, kwargs
+        if self._has_sensitive(args, kwargs):
+            args, kwargs = self._unwrap_args(args, kwargs)
+        result = await super()._async_devlog_executor(fn, *args, **kwargs)
+        self._do_logging(fn, result, *original_args, **original_kwargs)
+        return result
+
+    def _do_logging(self, fn: FunctionType, result: Any, *args: Any, **kwargs: Any) -> None:
         logger = self.get_logger(fn)
 
         extra = {self.result_format_variable: result, self.callable_format_variable: fn}
@@ -119,9 +142,9 @@ class LogOnError(LoggingDecorator):
     """
 
     def __init__(self, log_level: int = logging.ERROR,
-                 message: str = None,
-                 on_exceptions: Optional[Union[Type[BaseException], Tuple[Type[BaseException]], Tuple[()]]] = None,
-                 reraise: bool = True, exception_format_variable: str = "error", **kwargs):
+                 message: Optional[str] = None,
+                 on_exceptions: Optional[Union[Type[BaseException], Tuple[Type[BaseException], ...]]] = None,
+                 reraise: bool = True, exception_format_variable: str = "error", **kwargs: Any):
         super().__init__(log_level, message, **kwargs)
         if message is None:
             self.message = "Error in func {{{cal_var}.__name__}} " \
@@ -129,17 +152,31 @@ class LogOnError(LoggingDecorator):
                 cal_var=self.callable_format_variable,
                 except_var=exception_format_variable
             )
-        self.on_exceptions: Union[Type[BaseException], Tuple[Type[BaseException]], Tuple[()]] = on_exceptions if \
+        self.on_exceptions: Union[Type[BaseException], Tuple[Type[BaseException], ...]] = on_exceptions if \
             on_exceptions is not None else BaseException
         self.reraise = reraise
         self.exception_format_variable = exception_format_variable
         self.capture_locals = self.trace_stack or self.capture_locals
 
     def _devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
+        original_args, original_kwargs = args, kwargs
+        if self._has_sensitive(args, kwargs):
+            args, kwargs = self._unwrap_args(args, kwargs)
         try:
             return super()._devlog_executor(fn, *args, **kwargs)
         except BaseException as e:
-            self._on_error(fn, e, *args, **kwargs)
+            self._on_error(fn, e, *original_args, **original_kwargs)
+
+    async def _async_devlog_executor(self, fn: FunctionType, *args: Any, **kwargs: Any) -> Any:
+        __tracebackhide__ = True
+        original_args, original_kwargs = args, kwargs
+        if self._has_sensitive(args, kwargs):
+            args, kwargs = self._unwrap_args(args, kwargs)
+        try:
+            return await super()._async_devlog_executor(fn, *args, **kwargs)
+        except BaseException as e:
+            self._on_error(fn, e, *original_args, **original_kwargs)
 
     def _do_logging(self, fn: FunctionType, *args: Any, **kwargs: Any) -> None:
         logger = self.get_logger(fn)
@@ -163,10 +200,10 @@ class LogOnError(LoggingDecorator):
         self.log(logger, self.log_level, msg)
 
     def _on_error(self, fn: FunctionType, exception: BaseException, *args: Any, **kwargs: Any) -> None:
-
-        if issubclass(exception.__class__, self.on_exceptions) and not hasattr(exception, "reraised"):
+        __tracebackhide__ = True
+        if issubclass(exception.__class__, self.on_exceptions) and not hasattr(exception, "_devlog_logged"):
             self._do_logging(fn, *args, **kwargs)
-            exception.reraised = True  # Mark the exception as reraised, so no more logging is done.
+            exception._devlog_logged = True
         if self.reraise:
             raise
 
