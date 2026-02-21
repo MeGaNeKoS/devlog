@@ -1,5 +1,17 @@
 Change Log
 ==========
+2.0 (21/02/2026)
+----------------
+- Add async/await support for decorators
+- Add Sensitive value sanitization to redact sensitive data from logs
+- Add __tracebackhide__ support for cleaner tracebacks in pytest
+- Refactor: modularize decorator.py into base.py and decorators.py
+- Fix: rewrite custom_excepthook with proper file write mode and error handling
+- Modernize GitHub Actions CI workflows
+- Migrate build configuration to pyproject.toml
+- Use setuptools-scm for dynamic versioning from git tags
+- Drop support for Python < 3.9
+
 1.2 (13/06/2022)
 ----------------
 - Add anti log the same exception twice
